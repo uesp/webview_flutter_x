@@ -107,7 +107,7 @@ class ScrollWheelEvent {
   /// Native [NSEvent.timestamp].
   final double timestamp;
 
-  /// Global position in screen coordinates.
+  /// Global position in Flutter global (window-relative logical) coordinates.
   final Offset globalPosition;
 
   /// Local position relative to the scroll view.

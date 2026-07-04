@@ -6,6 +6,7 @@
   import UIKit
 #elseif os(macOS)
   import AppKit
+  import FlutterMacOS
 #endif
 
 #if os(iOS)
@@ -148,12 +149,7 @@
       let hasPreciseDeltas = event.hasPreciseScrollingDeltas
       let deltaX = hasPreciseDeltas ? event.scrollingDeltaX : event.deltaX
       let deltaY = hasPreciseDeltas ? event.scrollingDeltaY : event.deltaY
-      let globalPoint: NSPoint
-      if let window = event.window {
-        globalPoint = window.convertPoint(toScreen: event.locationInWindow)
-      } else {
-        globalPoint = event.locationInWindow
-      }
+      let globalPoint = flutterGlobalPoint(for: event, view: view)
       let localPoint = view.convert(event.locationInWindow, from: nil)
       reportScrollWheel(
         scrollView: nil,
@@ -218,8 +214,8 @@
           scrollView: nil,
           eventType: .end,
           timestamp: lastEvent.timestamp,
-          globalX: self.globalPoint(for: lastEvent).x,
-          globalY: self.globalPoint(for: lastEvent).y,
+          globalX: self.flutterGlobalPoint(for: lastEvent, view: view).x,
+          globalY: self.flutterGlobalPoint(for: lastEvent, view: view).y,
           localX: view.convert(lastEvent.locationInWindow, from: nil).x,
           localY: view.convert(lastEvent.locationInWindow, from: nil).y,
           deltaX: 0,
@@ -232,11 +228,27 @@
       return eventType
     }
 
-    private func globalPoint(for event: NSEvent) -> NSPoint {
-      if let window = event.window {
-        return window.convertPoint(toScreen: event.locationInWindow)
+    /// Maps a scroll-wheel event to Flutter global (window-relative logical) coordinates.
+    private func flutterGlobalPoint(for event: NSEvent, view: NSView) -> NSPoint {
+      let localPoint = view.convert(event.locationInWindow, from: nil)
+      guard let flutterView = flutterContentView(from: view) else {
+        return event.locationInWindow
       }
-      return event.locationInWindow
+      return view.convert(localPoint, to: flutterView)
+    }
+
+    private func flutterContentView(from view: NSView) -> NSView? {
+      if let controller = view.window?.contentViewController as? FlutterViewController {
+        return controller.view
+      }
+      var current: NSView? = view
+      while let currentView = current {
+        if String(describing: type(of: currentView)).hasPrefix("FlutterView") {
+          return currentView
+        }
+        current = currentView.superview
+      }
+      return nil
     }
 
     private func reportScrollWheel(
