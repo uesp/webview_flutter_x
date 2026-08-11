@@ -1,14 +1,8 @@
-include: package:flutter_lints/flutter.yaml
-
 # Pigeon-generated ProxyApi codecs can be unused; known upstream issue:
 # https://github.com/flutter/flutter/issues/183945
 analyzer:
   exclude:
-    - '**/*.g.dart'
+    - lib/**/*.g.dart
   errors:
     # Upstream Flutter TODO notes; not actionable in this fork.
     todo: ignore
-
-linter:
-  rules:
-    constant_identifier_names: false
