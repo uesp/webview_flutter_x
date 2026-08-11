@@ -1,0 +1,4 @@
+analyzer:
+  errors:
+    # Upstream Flutter TODO notes; not actionable in this fork.
+    todo: ignore
