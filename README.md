@@ -1,64 +1,36 @@
-# webview\_flutter\_wkwebview
+# webview_flutter_x
 
-The Apple WKWebView implementation of [`webview_flutter`][1].
+UESP fork bundling Flutter WebView for our mobile apps:
 
-## Upstream sync
+- **Plus API** (`WebViewControllerPlus`) — local HTML/CSS/JS, scroll/click/resize bridges, padding helpers
+- **Vendored** `webview_flutter` (path)
+- **Android** fork (`webview_flutter_android/`)
+- **Apple** fork (`wkwebview_flutter/`)
 
-This repository is maintained as an extracted mirror of:
+App dependency is this package only (path / submodule). Platform impls are pulled in via the path deps in `pubspec.yaml`.
 
-`flutter/packages/packages/webview_flutter/webview_flutter_wkwebview`
-
-That means this repository root maps to that subdirectory in the Flutter
-monorepo.
-
-### Pull latest upstream into local changes
-
-If you have local commits and want to pull in newer upstream plugin changes:
-
-1. Commit your local changes on a branch.
-2. Regenerate/fetch the latest extracted upstream plugin branch from
-   `flutter/packages`.
-3. Rebase your branch onto that refreshed upstream branch (preferred), or merge
-   it if you want to avoid history rewrite.
-
-### Send changes back to Flutter upstream
-
-Open upstream PRs from a `flutter/packages` branch, with your changes under:
-
-`packages/webview_flutter/webview_flutter_wkwebview`
-
-[1]: https://pub.dev/packages/webview_flutter
-[2]: https://flutter.dev/to/endorsed-federated-plugin
-
-
-## Usage
-
-This package is [endorsed][2], which means you can simply use `webview_flutter`
-normally. This package will be automatically included in your app when you do,
-so you do not need to add it to your `pubspec.yaml`.
-
-However, if you `import` this package to use any of its APIs directly, you
-should add it to your `pubspec.yaml` as usual.
-
-### External Native API
-
-The plugin also provides a native API accessible by the native code of iOS applications or packages.
-This API follows the convention of breaking changes of the Dart API, which means that any changes to
-the class that are not backwards compatible will only be made with a major version change of the
-plugin. Native code other than this external API does not follow breaking change conventions, so
-app or plugin clients should not use any other native APIs.
-
-The API can be accessed by importing the native plugin `webview_flutter_wkwebview`:
-
-Objective-C:
-
-```objectivec
-@import webview_flutter_wkwebview;
+```yaml
+dependencies:
+  webview_flutter_x:
+    path: dependencies/webview_flutter_x
 ```
 
-Then you will have access to the native class `FWFWebViewFlutterWKWebViewExternalAPI`.
+```dart
+import 'package:webview_flutter_x/webview_flutter_x.dart';
+```
 
-## Contributing
+Remote: https://github.com/uesp/webview_flutter_x
 
-For information on contributing to this plugin, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+## Layout
 
+```
+lib/                     # webview_flutter_x public API
+webview_flutter/         # stock webview_flutter (path)
+webview_flutter_android/ # Android fork
+wkwebview_flutter/       # Apple fork
+example/
+```
+
+## History
+
+This repository was renamed from `uesp/wkwebview_flutter`. The previous Apple-only root layout is kept on branch `archive/wk-root`.

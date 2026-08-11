@@ -1,37 +1,41 @@
-name: webview_flutter_wkwebview_example
-description: Demonstrates how to use the webview_flutter_wkwebview plugin.
-publish_to: none
+name: webview_flutter_x_example
+description: "A new Flutter project."
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0
-  flutter: ">=3.35.0"
+  sdk: '>=3.4.4 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  path_provider: ^2.0.6
-  webview_flutter_platform_interface: ^2.14.0
-  webview_flutter_wkwebview:
-    # When depending on this package from a real application you should use:
-    #   webview_flutter: ^x.y.z
-    # See https://dart.dev/tools/pub/dependencies#version-constraints
-    # The example app is bundled with the plugin so we use a path dependency on
-    # the parent directory to use the current plugin's version.
+
+  webview_flutter_x:
     path: ../
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
-  leak_tracker: any
+
+
+  flutter_lints: ^5.0.0
+
+# Plus's overrides are ignored when this example is the pub root.
+dependency_overrides:
+  webview_flutter:
+    path: ../webview_flutter
+  webview_flutter_wkwebview:
+    path: ../wkwebview_flutter
+  webview_flutter_android:
+    path: ../webview_flutter_android
 
 flutter:
+
   uses-material-design: true
+
   assets:
-    - assets/sample_audio.ogg
-    - assets/sample_video.mp4
-    - assets/www/index.html
-    - assets/www/styles/style.css
-    # Test certificate used to create a test native `SecTrust`.
-    - assets/test_cert.der
+    - assets/index.html
+    - assets/style.css
+    - assets/script.js

@@ -1,6 +1,11 @@
-example/ios/Flutter/flutter_export_environment.sh
-example/.flutter-plugins-dependencies
-example/ios/Flutter/Generated.xcconfig
-build/ios/SourcePackages/workspace-state.json
-example/build/ios/SourcePackages/workspace-state.json
-example/ios/Flutter/flutter_export_environment.sh
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+.idea/
+*.iml
+*.snapshot
+.DS_Store
