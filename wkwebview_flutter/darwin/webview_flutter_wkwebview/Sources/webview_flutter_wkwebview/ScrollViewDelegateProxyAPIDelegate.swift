@@ -24,7 +24,6 @@
     var consumeScrollGestures = false
     var previousScrollEnabled: Bool?
     var lastPanTranslation = CGPoint.zero
-    var windowObserver: NSKeyValueObservation?
 
     init(api: PigeonApiProtocolUIScrollViewDelegate, registrar: ProxyAPIRegistrar) {
       self.api = api
@@ -52,6 +51,9 @@
     /// Installation waits until [webView] is in a window so it can attach to
     /// Flutter's `FlutterTouchInterceptingView` (where platform-view touches
     /// actually arrive). Long-press / selection recognizers are disabled.
+    ///
+    /// Prefer [onWebViewMovedToWindow] (via `WebViewImpl.didMoveToWindow`) over
+    /// KVO on `window` — the latter does not fire for Flutter platform views.
     func attachScrollGesture(to webView: WKWebView, consume: Bool) {
       detachScrollGesture()
       gestureWebView = webView
@@ -62,18 +64,24 @@
         webView.scrollView.isScrollEnabled = false
       }
       disableSelectionRecognizers(in: webView)
-      windowObserver = webView.observe(\.window, options: [.new]) { [weak self] view, _ in
-        guard let self, view.window != nil else { return }
-        self.installPan(on: view)
-      }
       if webView.window != nil {
         installPan(on: webView)
+      } else {
+        // Next run-loop: platform view may already be inserting us into a window.
+        DispatchQueue.main.async { [weak self, weak webView] in
+          guard let self, let webView, webView.window != nil else { return }
+          self.installPan(on: webView)
+        }
       }
     }
 
+    /// Called from `WebViewImpl.didMoveToWindow` once the view is in a window.
+    func onWebViewMovedToWindow() {
+      guard let webView = gestureWebView, webView.window != nil else { return }
+      installPan(on: webView)
+    }
+
     func detachScrollGesture() {
-      windowObserver?.invalidate()
-      windowObserver = nil
       if let pan = panGestureRecognizer {
         pan.view?.removeGestureRecognizer(pan)
       }
@@ -92,7 +100,13 @@
 
     /// Installs the pan on Flutter's touch-intercepting wrapper when present.
     private func installPan(on webView: WKWebView) {
-      if panGestureRecognizer != nil { return }
+      // Prefer FlutterTouchInterceptingView; re-home if we attached to WKWebView early.
+      let host = flutterTouchInterceptingView(from: webView) ?? webView
+      if let existing = panGestureRecognizer {
+        if existing.view === host { return }
+        existing.view?.removeGestureRecognizer(existing)
+        panGestureRecognizer = nil
+      }
       disableSelectionRecognizers(in: webView)
       let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
       pan.delegate = self
@@ -100,7 +114,6 @@
       pan.delaysTouchesBegan = false
       pan.delaysTouchesEnded = false
       pan.maximumNumberOfTouches = 1
-      let host = flutterTouchInterceptingView(from: webView) ?? webView
       host.addGestureRecognizer(pan)
       panGestureRecognizer = pan
     }

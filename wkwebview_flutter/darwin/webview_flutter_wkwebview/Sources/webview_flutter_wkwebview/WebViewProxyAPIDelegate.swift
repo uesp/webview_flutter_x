@@ -136,6 +136,17 @@ class WebViewImpl: WKWebView {
       #endif
     }
   }
+
+  #if os(iOS)
+    /// KVO on `window` does not reliably fire for Flutter platform views; use this instead
+    /// to install the Flutter-owned scroll pan once the view is in the hierarchy.
+    override func didMoveToWindow() {
+      super.didMoveToWindow()
+      guard window != nil else { return }
+      let viewId = ObjectIdentifier(self)
+      iosWebViewScrollGestureDelegates[viewId]?.onWebViewMovedToWindow()
+    }
+  #endif
 }
 
 /// ProxyApi implementation for `WKWebView`.
