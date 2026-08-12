@@ -48,7 +48,7 @@ class WebViewControllerPlus extends WebViewController {
 	void Function()? _onClick;
 
 	/// Handler for user-driven scroll input.
-	void Function(ScrollEvent event)? _onScroll;
+	void Function(WebviewScrollEvent event)? _onScroll;
 
 	/// Handler for document layout/resize changes from injected JS.
 	void Function(Size size)? _onResize;
@@ -119,7 +119,7 @@ class WebViewControllerPlus extends WebViewController {
 	/// - **iOS / macOS:** native [WebKitWebViewController.setOnScrollGesture].
 	/// - **Android:** native [android_wv.AndroidWebViewController.setOnScrollGesture].
 	/// - **Other desktop:** JavaScript `wheel` → [OnScroll].
-	void setOnScrollListener(void Function(ScrollEvent event)? onScroll) {
+	void setScrollGestureListener(void Function(WebviewScrollEvent event)? onScroll) {
 		if (onScroll == null) return;
 		_onScroll = onScroll;
 		if (_isApple) {
@@ -356,7 +356,7 @@ class WebViewControllerPlus extends WebViewController {
 		} catch (_) {}
 	}
 
-	/// Builds a [ScrollEvent] and forwards it to [_onScroll].
+	/// Builds a [WebviewScrollEvent] and forwards it to [_onScroll].
 	void _buildScrollEvent({
 		required ScrollEventPhase eventType,
 		required Offset delta,
@@ -365,7 +365,7 @@ class WebViewControllerPlus extends WebViewController {
 		Offset? localPosition,
 	}) {
 		_scrollOffset += delta;
-		final event = ScrollEvent(
+		final event = WebviewScrollEvent(
 			eventType: eventType,
 			delta: delta,
 			velocity: velocity,

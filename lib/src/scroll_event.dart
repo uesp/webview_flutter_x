@@ -19,9 +19,9 @@ enum ScrollEventPhase {
 
 /// User-driven scroll input forwarded from native platform gestures or JavaScript.
 @immutable
-class ScrollEvent {
-	/// Creates a [ScrollEvent].
-	const ScrollEvent({
+class WebviewScrollEvent {
+	/// Creates a [WebviewScrollEvent].
+	const WebviewScrollEvent({
 		required this.eventType,
 		this.delta,
 		this.velocity,
@@ -49,7 +49,7 @@ class ScrollEvent {
 	final Offset? localPosition;
 
 	/// Returns a copy of this event with the given fields replaced.
-	ScrollEvent copyWith({
+	WebviewScrollEvent copyWith({
 		ScrollEventPhase? eventType,
 		Offset? delta,
 		Offset? velocity,
@@ -57,7 +57,7 @@ class ScrollEvent {
 		Offset? globalPosition,
 		Offset? localPosition,
 	}) =>
-			ScrollEvent(
+			WebviewScrollEvent(
 				eventType: eventType ?? this.eventType,
 				delta: delta ?? this.delta,
 				velocity: velocity ?? this.velocity,
@@ -68,5 +68,5 @@ class ScrollEvent {
 
 	@override
 	String toString() =>
-			'ScrollEvent($eventType, delta: $delta, velocity: $velocity, offset: $offset, globalPosition: $globalPosition, localPosition: $localPosition)';
+			'WebviewScrollEvent($eventType, delta: $delta, velocity: $velocity, offset: $offset, globalPosition: $globalPosition, localPosition: $localPosition)';
 }
