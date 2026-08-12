@@ -25,9 +25,12 @@ class WebviewScrollEvent {
 		required this.eventType,
 		this.delta,
 		this.velocity,
-		required this.offset,
+		this.offset = Offset.zero,
 		this.globalPosition,
 		this.localPosition,
+		this.timestamp,
+		this.isMomentum = false,
+		this.hasPreciseDeltas = true,
 	});
 
 	/// Lifecycle phase of the scroll gesture.
@@ -40,6 +43,9 @@ class WebviewScrollEvent {
 	final Offset? velocity;
 
 	/// Total scroll offset accumulated since the page loaded.
+	///
+	/// Platform controllers typically pass [Offset.zero]; [WebViewControllerPlus]
+	/// fills this in as deltas arrive.
 	final Offset offset;
 
 	/// Pointer position in Flutter global (window-relative logical) coordinates when available.
@@ -47,6 +53,15 @@ class WebviewScrollEvent {
 
 	/// Pointer position relative to the webview platform view when available.
 	final Offset? localPosition;
+
+	/// Native event timestamp in seconds, when the platform provides one.
+	final double? timestamp;
+
+	/// Whether the event is part of a momentum scroll (macOS trackpad).
+	final bool isMomentum;
+
+	/// Whether [delta] uses precise scrolling deltas (macOS).
+	final bool hasPreciseDeltas;
 
 	/// Returns a copy of this event with the given fields replaced.
 	WebviewScrollEvent copyWith({
@@ -56,6 +71,9 @@ class WebviewScrollEvent {
 		Offset? offset,
 		Offset? globalPosition,
 		Offset? localPosition,
+		double? timestamp,
+		bool? isMomentum,
+		bool? hasPreciseDeltas,
 	}) =>
 			WebviewScrollEvent(
 				eventType: eventType ?? this.eventType,
@@ -64,6 +82,9 @@ class WebviewScrollEvent {
 				offset: offset ?? this.offset,
 				globalPosition: globalPosition ?? this.globalPosition,
 				localPosition: localPosition ?? this.localPosition,
+				timestamp: timestamp ?? this.timestamp,
+				isMomentum: isMomentum ?? this.isMomentum,
+				hasPreciseDeltas: hasPreciseDeltas ?? this.hasPreciseDeltas,
 			);
 
 	@override

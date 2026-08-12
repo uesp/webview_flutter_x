@@ -12,9 +12,6 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 /// Extended [WebViewController] with document bridges and native scroll input.
 class WebViewControllerPlus extends WebViewController {
-	WebViewControllerPlus({
-		super.onPermissionRequest,
-	});
 
 	//|----------------------------------------------------
 	//| Properties
@@ -41,6 +38,10 @@ class WebViewControllerPlus extends WebViewController {
 	/// Last padding passed to [setPadding]; reapplied after each page load.
 	EdgeInsets? _padding;
 
+	//|----------------------------------------------------
+	//| Callbacks
+	//|----------------------------------------------------
+
 	/// Handler for link long-press / context-menu URLs from injected JS.
 	void Function(String url)? _onLinkClick;
 
@@ -64,29 +65,32 @@ class WebViewControllerPlus extends WebViewController {
 	static const double LINK_LONG_PRESS_DELAY_DEDUPE = 400.0;
 
 	//|----------------------------------------------------
-	//| Stock plus APIs
+	//| Constructor
+	//|----------------------------------------------------
+
+	WebViewControllerPlus({
+		super.onPermissionRequest,
+	});
+
+	//|----------------------------------------------------
+	//| Getters
 	//|----------------------------------------------------
 
 	/// Return the height of [WebViewWidget]
 	Future<double> get webViewHeight => _getWebViewHeight();
 
-	Future<double> _getWebViewHeight() async {
-		String getHeightScript = r"""(function () {
-                var element = document.body;
-                var height = element.offsetHeight,
-                    style = window.getComputedStyle(element)
-                return ['top', 'bottom']
-                    .map(function (side) {
-                        return parseInt(style["margin-" + side]);
-                    }).reduce(function (total, side) {
-                        return total + side;
-                    }, height)
-            })();""";
+	bool get _isApple =>
+			defaultTargetPlatform == TargetPlatform.iOS ||
+			defaultTargetPlatform == TargetPlatform.macOS;
 
-		return double.parse(
-				(await super.runJavaScriptReturningResult(getHeightScript))
-						.toString());
-	}
+	bool get _isDesktop =>
+			defaultTargetPlatform == TargetPlatform.macOS ||
+			defaultTargetPlatform == TargetPlatform.linux ||
+			defaultTargetPlatform == TargetPlatform.windows;
+
+	//|----------------------------------------------------
+	//| Functions
+	//|----------------------------------------------------
 
 	/// Load assets on the local server. [LocalHostServer] must be running.
 	///
@@ -109,9 +113,15 @@ class WebViewControllerPlus extends WebViewController {
 				headers: headers, body: body, method: method);
 	}
 
-	//|----------------------------------------------------
-	//| Document bridges
-	//|----------------------------------------------------
+	/// Whether to allow previews for link destinations and detected data.
+	///
+	/// Forwards to [WebKitWebViewController.setAllowsLinkPreview] on iOS /
+	/// macOS. No-op on other platforms.
+	Future<void> setAllowsLinkPreview(bool allow) async {
+		if (!_isApple) return;
+		final controller = platform as WebKitWebViewController;
+		await controller.setAllowsLinkPreview(allow);
+	}
 
 	/// Registers [onScroll] for user-driven scroll input.
 	///
@@ -126,9 +136,9 @@ class WebViewControllerPlus extends WebViewController {
 			final controller = platform as WebKitWebViewController;
 			controller.setOnScrollGesture((event) {
 				_buildScrollEvent(
-					eventType: _phaseFromApple(event.eventType),
-					delta: event.delta,
-					velocity: event.velocity,
+					eventType: event.eventType,
+					delta: event.delta ?? Offset.zero,
+					velocity: event.velocity ?? Offset.zero,
 					globalPosition: event.globalPosition,
 					localPosition: event.localPosition,
 				);
@@ -139,9 +149,9 @@ class WebViewControllerPlus extends WebViewController {
 			final controller = platform as android_wv.AndroidWebViewController;
 			controller.setOnScrollGesture((event) {
 				_buildScrollEvent(
-					eventType: _phaseFromAndroid(event.eventType),
-					delta: event.delta,
-					velocity: event.velocity,
+					eventType: event.eventType,
+					delta: event.delta ?? Offset.zero,
+					velocity: event.velocity ?? Offset.zero,
 					globalPosition: event.globalPosition,
 					localPosition: event.localPosition,
 				);
@@ -287,14 +297,23 @@ class WebViewControllerPlus extends WebViewController {
 	//| Internal
 	//|----------------------------------------------------
 
-	bool get _isApple =>
-			defaultTargetPlatform == TargetPlatform.iOS ||
-			defaultTargetPlatform == TargetPlatform.macOS;
+	Future<double> _getWebViewHeight() async {
+		String getHeightScript = r"""(function () {
+                var element = document.body;
+                var height = element.offsetHeight,
+                    style = window.getComputedStyle(element)
+                return ['top', 'bottom']
+                    .map(function (side) {
+                        return parseInt(style["margin-" + side]);
+                    }).reduce(function (total, side) {
+                        return total + side;
+                    }, height)
+            })();""";
 
-	bool get _isDesktop =>
-			defaultTargetPlatform == TargetPlatform.macOS ||
-			defaultTargetPlatform == TargetPlatform.linux ||
-			defaultTargetPlatform == TargetPlatform.windows;
+		return double.parse(
+				(await super.runJavaScriptReturningResult(getHeightScript))
+						.toString());
+	}
 
 	/// Injects listeners registered via the document bridge setters.
 	void _injectDocumentListeners() {
@@ -417,7 +436,7 @@ class WebViewControllerPlus extends WebViewController {
 				? 'function onContextMenu(e){var href=hrefFrom(e.target);if(href)send(href);e.preventDefault();}'
 				: 'function onContextMenu(e){var href=hrefFrom(e.target);if(!href)return;e.preventDefault();send(href);}';
 		runJavaScript(
-			'(function(){var key=\'__LinkLongPressBridge\';var prev=window[key];if(prev&&prev.remove){prev.remove();}var LONG_MS=$LINK_LONG_PRESS_DELAY;var SLOP_SQ=100;var DEDUPE_MS=$LINK_LONG_PRESS_DELAY_DEDUPE;var longPressTimer=null;var anchorHref=null;var startXY=null;var lastSent=0;var lastUrl=\'\';var suppressClickHref=null;function hrefFrom(el){while(el&&el!==document){if(el.tagName===\'A\'&&el.href)return el.href;el=el.parentElement;}return null;}function send(url){var now=Date.now();if(url===lastUrl&&now-lastSent<DEDUPE_MS)return;lastUrl=url;lastSent=now;suppressClickHref=url;LinkLongPress.postMessage(url);}$onContextMenuJS function cancelPress(){clearTimeout(longPressTimer);longPressTimer=null;anchorHref=null;startXY=null;}function onPointerDown(e){if(e.pointerType===\'mouse\'&&e.button!==0)return;var href=hrefFrom(e.target);if(!href){suppressClickHref=null;return;}cancelPress();anchorHref=href;startXY={x:e.clientX,y:e.clientY};longPressTimer=setTimeout(function(){longPressTimer=null;if(anchorHref)send(anchorHref);cancelPress();},LONG_MS);}function onPointerMove(e){if(!anchorHref||!startXY)return;var h=hrefFrom(e.target);if(h!==anchorHref){cancelPress();return;}var dx=e.clientX-startXY.x,dy=e.clientY-startXY.y;if(dx*dx+dy*dy>SLOP_SQ)cancelPress();}function onPointerEnd(e){cancelPress();}function onClick(e){if(!suppressClickHref)return;var href=hrefFrom(e.target);if(href===suppressClickHref){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}suppressClickHref=null;}document.addEventListener(\'contextmenu\',onContextMenu,true);document.addEventListener(\'click\',onClick,true);document.addEventListener(\'pointerdown\',onPointerDown,{passive:true,capture:true});document.addEventListener(\'pointermove\',onPointerMove,{passive:true,capture:true});document.addEventListener(\'pointerup\',onPointerEnd,{passive:true,capture:true});document.addEventListener(\'pointercancel\',onPointerEnd,{passive:true,capture:true});window[key]={remove:function(){cancelPress();suppressClickHref=null;document.removeEventListener(\'contextmenu\',onContextMenu,true);document.removeEventListener(\'click\',onClick,true);document.removeEventListener(\'pointerdown\',onPointerDown,{capture:true});document.removeEventListener(\'pointermove\',onPointerMove,{capture:true});document.removeEventListener(\'pointerup\',onPointerEnd,{capture:true});document.removeEventListener(\'pointercancel\',onPointerEnd,{capture:true});}};})();',
+			'(function(){var key=\'__LinkLongPressBridge\';var prev=window[key];if(prev&&prev.remove){prev.remove();}var LONG_MS=$LINK_LONG_PRESS_DELAY;var SLOP_SQ=100;var DEDUPE_MS=$LINK_LONG_PRESS_DELAY_DEDUPE;var longPressTimer=null;var anchorHref=null;var startXY=null;var lastSent=0;var lastUrl=\'\';var suppressClickHref=null;function hrefFrom(el){while(el&&el!==document){if(el.tagName===\'A\'&&el.href)return el.href;el=el.parentElement;}return null;}function send(url){var now=Date.now();if(url===lastUrl&&now-lastSent<DEDUPE_MS)return;lastUrl=url;lastSent=now;suppressClickHref=url;var sel=window.getSelection();if(sel)sel.removeAllRanges();LinkLongPress.postMessage(url);}$onContextMenuJS function cancelPress(){clearTimeout(longPressTimer);longPressTimer=null;anchorHref=null;startXY=null;}function onPointerDown(e){if(e.pointerType===\'mouse\'&&e.button!==0)return;var href=hrefFrom(e.target);if(!href){suppressClickHref=null;return;}cancelPress();anchorHref=href;startXY={x:e.clientX,y:e.clientY};longPressTimer=setTimeout(function(){longPressTimer=null;if(anchorHref)send(anchorHref);cancelPress();},LONG_MS);}function onPointerMove(e){if(!anchorHref||!startXY)return;var h=hrefFrom(e.target);if(h!==anchorHref){cancelPress();return;}var dx=e.clientX-startXY.x,dy=e.clientY-startXY.y;if(dx*dx+dy*dy>SLOP_SQ)cancelPress();}function onPointerEnd(e){cancelPress();}function onClick(e){if(!suppressClickHref)return;var href=hrefFrom(e.target);if(href===suppressClickHref){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}suppressClickHref=null;}document.addEventListener(\'contextmenu\',onContextMenu,true);document.addEventListener(\'click\',onClick,true);document.addEventListener(\'pointerdown\',onPointerDown,{passive:true,capture:true});document.addEventListener(\'pointermove\',onPointerMove,{passive:true,capture:true});document.addEventListener(\'pointerup\',onPointerEnd,{passive:true,capture:true});document.addEventListener(\'pointercancel\',onPointerEnd,{passive:true,capture:true});window[key]={remove:function(){cancelPress();suppressClickHref=null;document.removeEventListener(\'contextmenu\',onContextMenu,true);document.removeEventListener(\'click\',onClick,true);document.removeEventListener(\'pointerdown\',onPointerDown,{capture:true});document.removeEventListener(\'pointermove\',onPointerMove,{capture:true});document.removeEventListener(\'pointerup\',onPointerEnd,{capture:true});document.removeEventListener(\'pointercancel\',onPointerEnd,{capture:true});}};})();',
 		);
 	}
 
@@ -447,19 +466,4 @@ class WebViewControllerPlus extends WebViewController {
 		}
 		return null;
 	}
-
-	ScrollEventPhase _phaseFromApple(ScrollGesturePhase phase) => switch (phase) {
-				ScrollGesturePhase.start => ScrollEventPhase.start,
-				ScrollGesturePhase.update => ScrollEventPhase.update,
-				ScrollGesturePhase.end => ScrollEventPhase.end,
-				ScrollGesturePhase.cancel => ScrollEventPhase.cancel,
-			};
-
-	ScrollEventPhase _phaseFromAndroid(android_wv.ScrollGesturePhase phase) =>
-			switch (phase) {
-				android_wv.ScrollGesturePhase.start => ScrollEventPhase.start,
-				android_wv.ScrollGesturePhase.update => ScrollEventPhase.update,
-				android_wv.ScrollGesturePhase.end => ScrollEventPhase.end,
-				android_wv.ScrollGesturePhase.cancel => ScrollEventPhase.cancel,
-			};
 }

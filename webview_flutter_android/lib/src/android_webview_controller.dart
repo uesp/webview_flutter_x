@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'package:webview_flutter_x/scroll_event.dart';
 
 import 'android_ssl_auth_error.dart';
 import 'android_webkit.g.dart' as android_webview;
@@ -17,52 +18,11 @@ import 'android_webkit_constants.dart';
 import 'platform_views_service_proxy.dart';
 import 'weak_reference_utils.dart';
 
-/// Lifecycle phase for a native Android scroll gesture.
-enum ScrollGesturePhase {
-  /// The scroll gesture began.
-  start,
+/// Shared scroll phase from [webview_flutter_x].
+typedef ScrollGesturePhase = ScrollEventPhase;
 
-  /// The scroll gesture changed.
-  update,
-
-  /// The scroll gesture ended.
-  end,
-
-  /// The scroll gesture was cancelled.
-  cancel,
-}
-
-/// Native Android scroll-gesture event forwarded from the WebView touch path.
-@immutable
-class ScrollGestureEvent {
-  /// Constructs a [ScrollGestureEvent].
-  const ScrollGestureEvent({
-    required this.eventType,
-    required this.timestamp,
-    required this.globalPosition,
-    required this.localPosition,
-    required this.delta,
-    required this.velocity,
-  });
-
-  /// Lifecycle phase of the scroll gesture.
-  final ScrollGesturePhase eventType;
-
-  /// Native event timestamp (seconds).
-  final double timestamp;
-
-  /// Global position in Flutter logical coordinates.
-  final Offset globalPosition;
-
-  /// Local position relative to the WebView.
-  final Offset localPosition;
-
-  /// Scroll delta.
-  final Offset delta;
-
-  /// Gesture velocity (px/s), typically set on [ScrollGesturePhase.end].
-  final Offset velocity;
-}
+/// Shared scroll event from [webview_flutter_x].
+typedef ScrollGestureEvent = WebviewScrollEvent;
 
 /// Defines different types of sources causing window insets.
 ///

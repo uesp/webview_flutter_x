@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'package:webview_flutter_x/scroll_event.dart';
 
 import 'common/platform_scroll_view.dart';
 import 'common/platform_webview.dart';
@@ -71,60 +72,11 @@ base class WebKitLoadFileParams extends LoadFileParams {
   final String readAccessPath;
 }
 
-/// Lifecycle phase for a native scroll gesture (macOS wheel or iOS pan).
-enum ScrollGesturePhase {
-  /// The scroll gesture began.
-  start,
+/// Shared scroll phase from [webview_flutter_x].
+typedef ScrollGesturePhase = ScrollEventPhase;
 
-  /// The scroll gesture changed.
-  update,
-
-  /// The scroll gesture ended.
-  end,
-
-  /// The scroll gesture was cancelled.
-  cancel,
-}
-
-/// Native scroll-gesture event forwarded from WebKit (macOS wheel or iOS pan).
-@immutable
-class ScrollGestureEvent {
-  /// Constructs a [ScrollGestureEvent].
-  const ScrollGestureEvent({
-    required this.eventType,
-    required this.timestamp,
-    required this.globalPosition,
-    required this.localPosition,
-    required this.delta,
-    required this.velocity,
-    this.isMomentum = false,
-    this.hasPreciseDeltas = true,
-  });
-
-  /// Lifecycle phase of the scroll gesture.
-  final ScrollGesturePhase eventType;
-
-  /// Native event timestamp (seconds).
-  final double timestamp;
-
-  /// Global position in Flutter global (window-relative logical) coordinates.
-  final Offset globalPosition;
-
-  /// Local position relative to the web view / scroll view.
-  final Offset localPosition;
-
-  /// Scroll delta.
-  final Offset delta;
-
-  /// Gesture velocity (px/s), typically set on [ScrollGesturePhase.end].
-  final Offset velocity;
-
-  /// Whether the event is part of a momentum scroll (macOS trackpad).
-  final bool isMomentum;
-
-  /// Whether [delta] uses precise scrolling deltas (macOS).
-  final bool hasPreciseDeltas;
-}
+/// Shared scroll event from [webview_flutter_x].
+typedef ScrollGestureEvent = WebviewScrollEvent;
 
 /// Object specifying creation parameters for a [WebKitWebViewController].
 @immutable
