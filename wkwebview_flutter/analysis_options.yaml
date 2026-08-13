@@ -3,6 +3,13 @@
 analyzer:
   exclude:
     - lib/**/*.g.dart
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     # Upstream Flutter TODO notes; not actionable in this fork.
     todo: ignore

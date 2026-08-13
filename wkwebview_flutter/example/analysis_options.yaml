@@ -2,3 +2,11 @@ analyzer:
   errors:
     # Upstream Flutter TODO notes; not actionable in this fork.
     todo: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
