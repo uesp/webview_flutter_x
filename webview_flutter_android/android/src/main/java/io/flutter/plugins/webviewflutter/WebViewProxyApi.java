@@ -140,7 +140,8 @@ public class WebViewProxyApi extends PigeonApiWebView {
             if (!scrollGestureListening) {
               return false;
             }
-            final boolean handled = scrollGestureDetector.onTouchEvent(event);
+            final boolean wasScrolling = scrollGestureActive;
+            scrollGestureDetector.onTouchEvent(event);
             final int action = event.getActionMasked();
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
               if (scrollGestureActive) {
@@ -165,12 +166,18 @@ public class WebViewProxyApi extends PigeonApiWebView {
                     0);
               }
             }
-            // When consuming, claim move sequences so the WebView does not scroll;
-            // still allow the WebView to see taps (unhandled downs without scroll).
-            if (consumeScrollGestures && scrollGestureActive) {
+            // Consume only after a scroll is recognized so taps still reach the
+            // WebView. Cancel the in-progress WebView touch once we take over.
+            if (consumeScrollGestures && (scrollGestureActive || wasScrolling)) {
+              if (!wasScrolling) {
+                final MotionEvent cancel = MotionEvent.obtain(event);
+                cancel.setAction(MotionEvent.ACTION_CANCEL);
+                v.onTouchEvent(cancel);
+                cancel.recycle();
+              }
               return true;
             }
-            return handled && consumeScrollGestures;
+            return false;
           });
     }
 
