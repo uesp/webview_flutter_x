@@ -83,6 +83,71 @@ class ScrollViewDelegateProxyAPITests: XCTestCase {
       instance.detachScrollWheel()
       XCTAssertFalse(instance.hasScrollWheelMonitorForTesting)
     }
+
+    @MainActor func testDiscreteScrollWheelRequiresInBounds() {
+      let api = TestFWFNSScrollViewDelegateApi()
+      let registrar = TestProxyApiRegistrar()
+      let instance = FWFNSScrollViewDelegateImpl(api: api, registrar: registrar)
+
+      XCTAssertTrue(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: [], momentumPhase: [], inBounds: true))
+      XCTAssertFalse(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: [], momentumPhase: [], inBounds: false))
+    }
+
+    @MainActor func testPreciseScrollWheelLatchesOnInBoundsBegin() {
+      let api = TestFWFNSScrollViewDelegateApi()
+      let registrar = TestProxyApiRegistrar()
+      let instance = FWFNSScrollViewDelegateImpl(api: api, registrar: registrar)
+
+      XCTAssertTrue(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: .began, momentumPhase: [], inBounds: true))
+      XCTAssertTrue(instance.preciseGestureActiveForTesting)
+      // Out-of-bounds continue still handled while latched.
+      XCTAssertTrue(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: .changed, momentumPhase: [], inBounds: false))
+      XCTAssertTrue(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: .ended, momentumPhase: [], inBounds: false))
+    }
+
+    @MainActor func testPreciseScrollWheelDoesNotLatchOnForeignBegin() {
+      let api = TestFWFNSScrollViewDelegateApi()
+      let registrar = TestProxyApiRegistrar()
+      let instance = FWFNSScrollViewDelegateImpl(api: api, registrar: registrar)
+
+      XCTAssertFalse(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: .began, momentumPhase: [], inBounds: false))
+      XCTAssertFalse(instance.preciseGestureActiveForTesting)
+      // Later in-bounds update without a local begin stays unowned.
+      XCTAssertFalse(
+        instance.shouldHandleScrollWheelForTesting(
+          phase: .changed, momentumPhase: [], inBounds: true))
+    }
+
+    @MainActor func testForeignInBoundsScrollWheelIsRedirected() {
+      let api = TestFWFNSScrollViewDelegateApi()
+      let registrar = TestProxyApiRegistrar()
+      let instance = FWFNSScrollViewDelegateImpl(api: api, registrar: registrar)
+
+      let shouldHandle = instance.shouldHandleScrollWheelForTesting(
+        phase: .changed, momentumPhase: [], inBounds: true)
+      XCTAssertFalse(shouldHandle)
+      XCTAssertTrue(
+        instance.shouldRedirectForeignScrollWheelForTesting(
+          inBounds: true, shouldHandle: shouldHandle))
+      XCTAssertFalse(
+        instance.shouldRedirectForeignScrollWheelForTesting(
+          inBounds: false, shouldHandle: false))
+      XCTAssertFalse(
+        instance.shouldRedirectForeignScrollWheelForTesting(
+          inBounds: true, shouldHandle: true))
+    }
   #endif
 }
 

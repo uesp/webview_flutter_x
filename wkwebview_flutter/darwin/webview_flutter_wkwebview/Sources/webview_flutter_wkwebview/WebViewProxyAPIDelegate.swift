@@ -12,6 +12,7 @@ import WebKit
 #endif
 #if os(macOS)
   import AppKit
+  import FlutterMacOS
 
   /// Scroll-wheel monitors keyed by the `WKWebView` they observe.
   private var macWebViewScrollWheelDelegates:
@@ -86,6 +87,13 @@ class WebViewImpl: WKWebView {
 
   #if os(macOS)
     weak var fwfCachedMacScrollView: NSScrollView?
+
+    /// Whether the current mouse drag began with a down on this webview.
+    ///
+    /// AppKit re-hit-tests `mouseDragged` under the cursor. A drag that started
+    /// on Flutter must stay with Flutter even after the pointer crosses onto
+    /// this view; hover and downs that start here are unchanged.
+    private var mouseDownOnSelf = false
   #endif
 
   init(
@@ -145,6 +153,77 @@ class WebViewImpl: WKWebView {
       guard window != nil else { return }
       let viewId = ObjectIdentifier(self)
       iosWebViewScrollGestureDelegates[viewId]?.onWebViewMovedToWindow()
+    }
+  #endif
+
+  #if os(macOS)
+    override func mouseDown(with event: NSEvent) {
+      mouseDownOnSelf = true
+      super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+      mouseDownOnSelf = false
+      super.mouseUp(with: event)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+      if !mouseDownOnSelf {
+        flutterContentView()?.mouseDragged(with: event)
+        return
+      }
+      super.mouseDragged(with: event)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+      mouseDownOnSelf = true
+      super.rightMouseDown(with: event)
+    }
+
+    override func rightMouseUp(with event: NSEvent) {
+      mouseDownOnSelf = false
+      super.rightMouseUp(with: event)
+    }
+
+    override func rightMouseDragged(with event: NSEvent) {
+      if !mouseDownOnSelf {
+        flutterContentView()?.rightMouseDragged(with: event)
+        return
+      }
+      super.rightMouseDragged(with: event)
+    }
+
+    override func otherMouseDown(with event: NSEvent) {
+      mouseDownOnSelf = true
+      super.otherMouseDown(with: event)
+    }
+
+    override func otherMouseUp(with event: NSEvent) {
+      mouseDownOnSelf = false
+      super.otherMouseUp(with: event)
+    }
+
+    override func otherMouseDragged(with event: NSEvent) {
+      if !mouseDownOnSelf {
+        flutterContentView()?.otherMouseDragged(with: event)
+        return
+      }
+      super.otherMouseDragged(with: event)
+    }
+
+    /// Ancestor Flutter content view used to keep foreign drags in Flutter.
+    private func flutterContentView() -> NSView? {
+      if let controller = window?.contentViewController as? FlutterViewController {
+        return controller.view
+      }
+      var current: NSView? = self
+      while let view = current {
+        if String(describing: type(of: view)).hasPrefix("FlutterView") {
+          return view
+        }
+        current = view.superview
+      }
+      return nil
     }
   #endif
 }

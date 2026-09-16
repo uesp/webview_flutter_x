@@ -365,7 +365,14 @@
         guard let window = targetView.window, event.window == window else { return event }
         let locationInView = targetView.convert(event.locationInWindow, from: nil)
         let inBounds = targetView.bounds.contains(locationInView)
-        guard self.shouldHandleScrollWheel(event: event, inBounds: inBounds) else { return event }
+        guard self.shouldHandleScrollWheel(event: event, inBounds: inBounds) else {
+          // Foreign gesture under the webview: keep it in Flutter, do not let WKWebView eat it.
+          if inBounds, let flutterView = self.flutterContentView(from: targetView) {
+            flutterView.scrollWheel(with: event)
+            return nil
+          }
+          return event
+        }
         self.handleScrollWheel(event: event, view: targetView)
         return self.consumeScrollWheelEvents ? nil : event
       }
@@ -378,18 +385,22 @@
     /// start: once a gesture begins in-bounds it keeps delivering until it ends,
     /// even if the target view moves out from under the pointer mid-gesture.
     private func shouldHandleScrollWheel(event: NSEvent, inBounds: Bool) -> Bool {
-      let phase = event.phase
-      let momentum = event.momentumPhase
+      shouldHandleScrollWheel(
+        phase: event.phase, momentumPhase: event.momentumPhase, inBounds: inBounds)
+    }
 
+    private func shouldHandleScrollWheel(
+      phase: NSEvent.Phase, momentumPhase: NSEvent.Phase, inBounds: Bool
+    ) -> Bool {
       // Discrete mouse wheel carries no phase information; gate per-event.
-      if phase.isEmpty && momentum.isEmpty {
+      if phase.isEmpty && momentumPhase.isEmpty {
         return inBounds
       }
 
       if phase.contains(.began) || phase.contains(.mayBegin) {
         preciseGestureActive = inBounds
       } else if phase.contains(.cancelled)
-        || momentum.contains(.ended) || momentum.contains(.cancelled)
+        || momentumPhase.contains(.ended) || momentumPhase.contains(.cancelled)
       {
         let wasActive = preciseGestureActive
         preciseGestureActive = false
@@ -572,6 +583,26 @@
     #if DEBUG
       var hasScrollWheelMonitorForTesting: Bool {
         scrollWheelMonitor != nil
+      }
+
+      var preciseGestureActiveForTesting: Bool {
+        get { preciseGestureActive }
+        set { preciseGestureActive = newValue }
+      }
+
+      /// Exposes latch policy for unit tests.
+      func shouldHandleScrollWheelForTesting(
+        phase: NSEvent.Phase, momentumPhase: NSEvent.Phase, inBounds: Bool
+      ) -> Bool {
+        shouldHandleScrollWheel(
+          phase: phase, momentumPhase: momentumPhase, inBounds: inBounds)
+      }
+
+      /// Whether a rejected in-bounds wheel should be swallowed after Flutter redirect.
+      func shouldRedirectForeignScrollWheelForTesting(inBounds: Bool, shouldHandle: Bool)
+        -> Bool
+      {
+        !shouldHandle && inBounds
       }
 
       func reportScrollWheelForTesting(
