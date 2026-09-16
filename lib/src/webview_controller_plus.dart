@@ -129,12 +129,16 @@ class WebViewControllerPlus extends WebViewController {
 	/// - **iOS / macOS:** native [WebKitWebViewController.setOnScrollGesture].
 	/// - **Android:** native [android_wv.AndroidWebViewController.setOnScrollGesture].
 	/// - **Other desktop:** JavaScript `wheel` → [OnScroll].
-	void setScrollGestureListener(void Function(WebviewScrollEvent event)? onScroll) {
+	///
+	/// Awaits native attach so macOS consume is active before the platform view
+	/// is interacted with (the native side also installs a pending consume
+	/// monitor at `WKWebView` init for the pigeon round-trip gap).
+	Future<void> setScrollGestureListener(void Function(WebviewScrollEvent event)? onScroll) async {
 		if (onScroll == null) return;
 		_onScroll = onScroll;
 		if (_isApple) {
 			final controller = platform as WebKitWebViewController;
-			controller.setOnScrollGesture((event) {
+			await controller.setOnScrollGesture((event) {
 				_buildScrollEvent(
 					eventType: event.eventType,
 					delta: event.delta ?? Offset.zero,
@@ -147,7 +151,7 @@ class WebViewControllerPlus extends WebViewController {
 		}
 		if (defaultTargetPlatform == TargetPlatform.android) {
 			final controller = platform as android_wv.AndroidWebViewController;
-			controller.setOnScrollGesture((event) {
+			await controller.setOnScrollGesture((event) {
 				_buildScrollEvent(
 					eventType: event.eventType,
 					delta: event.delta ?? Offset.zero,
@@ -398,9 +402,10 @@ class WebViewControllerPlus extends WebViewController {
 	/// Injects the platform-specific user-scroll bridge.
 	///
 	/// Platform matrix:
-	/// - **macOS:** `preventDefault` on wheel only (native gesture is already
-	///   consumed via [WebKitWebViewController.setOnScrollGesture]; AppKit still
-	///   delivers wheel to the document unless JS blocks it).
+	/// - **macOS:** `preventDefault` on wheel (belt under the native consume
+	///   monitor; AppKit can still deliver wheel to the document if an event
+	///   slips past). Native consume also installs a pending monitor at
+	///   `WKWebView` init so the first platform-view paint cannot scroll.
 	/// - **iOS / Android:** no JS — native `consume` disables platform scrolling.
 	/// - **Other desktop:** posts wheel deltas to [OnScroll].
 	void _injectScrollListener() {

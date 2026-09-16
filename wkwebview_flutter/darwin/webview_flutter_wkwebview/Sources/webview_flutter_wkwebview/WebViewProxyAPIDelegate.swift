@@ -94,6 +94,16 @@ class WebViewImpl: WKWebView {
     /// on Flutter must stay with Flutter even after the pointer crosses onto
     /// this view; hover and downs that start here are unchanged.
     private var mouseDownOnSelf = false
+
+    /// When true, wheel events are not delivered to WKWebView's scroller.
+    ///
+    /// Defaults to true so the platform view cannot scroll on first paint
+    /// before Dart's `setScrollWheelDelegate(consume:)` round-trip completes.
+    var consumeScrollWheel = true
+
+    /// Temporary app-local wheel monitor installed at init so consume is active
+    /// before Dart attaches the real scroll-gesture monitor.
+    private var pendingScrollWheelMonitor: Any?
   #endif
 
   init(
@@ -107,10 +117,19 @@ class WebViewImpl: WKWebView {
       scrollView.contentInsetAdjustmentBehavior = .never
       scrollView.automaticallyAdjustsScrollIndicatorInsets = false
     #endif
+    #if os(macOS)
+      installPendingConsumeMonitor()
+    #endif
   }
 
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  deinit {
+    #if os(macOS)
+      removePendingConsumeMonitor()
+    #endif
   }
 
   override func observeValue(
@@ -211,6 +230,43 @@ class WebViewImpl: WKWebView {
       super.otherMouseDragged(with: event)
     }
 
+    override func scrollWheel(with event: NSEvent) {
+      guard consumeScrollWheel else {
+        super.scrollWheel(with: event)
+        return
+      }
+      // Before the Dart scroll-wheel monitor is attached, keep the gesture in
+      // Flutter so the document cannot scroll on first platform-view paint.
+      // Once the monitor is live it eats / redirects events itself.
+      if macWebViewScrollWheelDelegates[ObjectIdentifier(self)] == nil {
+        flutterContentView()?.scrollWheel(with: event)
+      }
+    }
+
+    /// Swallows in-bounds wheel events until Dart attaches the real monitor.
+    ///
+    /// AppKit can deliver `scrollWheel` to the embedded `NSScrollView`, so a
+    /// view override alone is not enough during the pigeon round-trip gap.
+    func installPendingConsumeMonitor() {
+      removePendingConsumeMonitor()
+      pendingScrollWheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) {
+        [weak self] event in
+        guard let self, self.consumeScrollWheel else { return event }
+        guard let window = self.window, event.window == window else { return event }
+        let locationInView = self.convert(event.locationInWindow, from: nil)
+        guard self.bounds.contains(locationInView) else { return event }
+        self.flutterContentView()?.scrollWheel(with: event)
+        return nil
+      }
+    }
+
+    func removePendingConsumeMonitor() {
+      if let monitor = pendingScrollWheelMonitor {
+        NSEvent.removeMonitor(monitor)
+        pendingScrollWheelMonitor = nil
+      }
+    }
+
     /// Ancestor Flutter content view used to keep foreign drags in Flutter.
     private func flutterContentView() -> NSView? {
       if let controller = window?.contentViewController as? FlutterViewController {
@@ -295,6 +351,12 @@ class WebViewProxyAPIDelegate: PigeonApiDelegateWKWebView, PigeonApiDelegateUIVi
       let viewId = ObjectIdentifier(pigeonInstance)
       macWebViewScrollWheelDelegates[viewId]?.detachScrollWheel()
       macWebViewScrollWheelDelegates.removeValue(forKey: viewId)
+      let webViewImpl = pigeonInstance as? WebViewImpl
+      // Drop the init-time pending monitor; the real one (or native scroll) takes over.
+      webViewImpl?.removePendingConsumeMonitor()
+      // Always sync the view flag: default-on consume covers the gap before
+      // this call; clearing the delegate must restore native scrolling.
+      webViewImpl?.consumeScrollWheel = (delegate != nil) ? consume : false
       guard let impl = delegate as? FWFNSScrollViewDelegateImpl else { return }
       macWebViewScrollWheelDelegates[viewId] = impl
       impl.attachScrollWheel(to: pigeonInstance, consume: consume)
