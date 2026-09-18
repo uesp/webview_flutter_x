@@ -203,7 +203,7 @@ class AndroidWebViewController extends PlatformWebViewController {
             globalPosition: Offset(globalX, globalY),
             localPosition: Offset(localX, localY),
             delta: Offset(deltaX, deltaY),
-            velocity: Offset(velocityX, velocityY),
+            velocity: Velocity(pixelsPerSecond: Offset(velocityX, velocityY)),
           ),
         );
       };

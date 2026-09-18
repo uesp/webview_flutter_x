@@ -1,6 +1,7 @@
 import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show Velocity;
 
 /// Lifecycle phase for a user-driven scroll gesture on the web view.
 enum ScrollEventPhase {
@@ -24,7 +25,7 @@ class WebviewScrollEvent {
 	const WebviewScrollEvent({
 		required this.eventType,
 		this.delta,
-		this.velocity,
+		this.velocity = Velocity.zero,
 		this.offset = Offset.zero,
 		this.globalPosition,
 		this.localPosition,
@@ -39,8 +40,8 @@ class WebviewScrollEvent {
 	/// Scroll delta for this event.
 	final Offset? delta;
 
-	/// Scroll velocity (px/s), typically set on [ScrollEventPhase.end].
-	final Offset? velocity;
+	/// Scroll velocity, typically set on [ScrollEventPhase.end].
+	final Velocity velocity;
 
 	/// Total scroll offset accumulated since the page loaded.
 	///
@@ -67,7 +68,7 @@ class WebviewScrollEvent {
 	WebviewScrollEvent copyWith({
 		ScrollEventPhase? eventType,
 		Offset? delta,
-		Offset? velocity,
+		Velocity? velocity,
 		Offset? offset,
 		Offset? globalPosition,
 		Offset? localPosition,

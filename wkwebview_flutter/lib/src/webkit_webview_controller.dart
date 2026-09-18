@@ -1226,7 +1226,7 @@ class WebKitWebViewController extends PlatformWebViewController {
             globalPosition: Offset(globalX, globalY),
             localPosition: Offset(localX, localY),
             delta: delta,
-            velocity: velocity,
+            velocity: Velocity(pixelsPerSecond: velocity),
             isMomentum: isMomentum,
             hasPreciseDeltas: hasPreciseDeltas,
           ),
@@ -1293,7 +1293,7 @@ class WebKitWebViewController extends PlatformWebViewController {
             globalPosition: Offset(globalX, globalY),
             localPosition: Offset(localX, localY),
             delta: delta,
-            velocity: velocity,
+            velocity: Velocity(pixelsPerSecond: velocity),
           ),
         );
       },

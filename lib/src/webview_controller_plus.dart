@@ -142,7 +142,7 @@ class WebViewControllerPlus extends WebViewController {
 				_buildScrollEvent(
 					eventType: event.eventType,
 					delta: event.delta ?? Offset.zero,
-					velocity: event.velocity ?? Offset.zero,
+					velocity: event.velocity,
 					globalPosition: event.globalPosition,
 					localPosition: event.localPosition,
 				);
@@ -155,7 +155,7 @@ class WebViewControllerPlus extends WebViewController {
 				_buildScrollEvent(
 					eventType: event.eventType,
 					delta: event.delta ?? Offset.zero,
-					velocity: event.velocity ?? Offset.zero,
+					velocity: event.velocity,
 					globalPosition: event.globalPosition,
 					localPosition: event.localPosition,
 				);
@@ -349,22 +349,22 @@ class WebViewControllerPlus extends WebViewController {
 					_buildScrollEvent(
 							eventType: ScrollEventPhase.start,
 							delta: Offset.zero,
-							velocity: Offset.zero,
+							velocity: Velocity.zero,
 							globalPosition: globalPosition,
 							localPosition: localPosition);
 				case 'end':
 					_buildScrollEvent(
 							eventType: ScrollEventPhase.end,
 							delta: Offset.zero,
-							velocity: Offset(
-									_getCoord(data, 'velocityX'), _getCoord(data, 'velocityY')),
+							velocity: Velocity(pixelsPerSecond: Offset(
+									_getCoord(data, 'velocityX'), _getCoord(data, 'velocityY'))),
 							globalPosition: globalPosition,
 							localPosition: localPosition);
 				case 'cancel':
 					_buildScrollEvent(
 							eventType: ScrollEventPhase.cancel,
 							delta: Offset.zero,
-							velocity: Offset.zero,
+							velocity: Velocity.zero,
 							globalPosition: globalPosition,
 							localPosition: localPosition);
 				case 'update' || _:
@@ -372,7 +372,7 @@ class WebViewControllerPlus extends WebViewController {
 							eventType: ScrollEventPhase.update,
 							delta: Offset(
 									_getCoord(data, 'deltaX'), _getCoord(data, 'deltaY')),
-							velocity: Offset.zero,
+							velocity: Velocity.zero,
 							globalPosition: globalPosition,
 							localPosition: localPosition);
 			}
@@ -383,7 +383,7 @@ class WebViewControllerPlus extends WebViewController {
 	void _buildScrollEvent({
 		required ScrollEventPhase eventType,
 		required Offset delta,
-		required Offset velocity,
+		required Velocity velocity,
 		Offset? globalPosition,
 		Offset? localPosition,
 	}) {
